@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import {
   ActionSheetIOS,
   ActivityIndicator,
@@ -20,12 +20,16 @@ import { GradientBackground } from "../../components/GradientBackground";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import { Product } from "../../types/product";
 
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const { favoriteProducts, loading, clearFavorites, toggleFavorite } =
-    useFavorites();
+  const {
+    favoriteProducts,
+    loading,
+    clearFavorites,
+    toggleFavorite,
+  } = useFavorites();
   const [undoItem, setUndoItem] = useState<Product | null>(null);
   const [showUndo, setShowUndo] = useState(false);
   const undoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -35,6 +39,37 @@ export default function FavoritesScreen() {
     null
   );
   const [showModal, setShowModal] = useState(false);
+  const flatListRef = useRef<FlatList>(null);
+  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
+
+  // Reset scroll position and all states when tab comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      // Scroll to top
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+
+      // Reset select mode and selections
+      setSelectMode(false);
+      setSelectedIds([]);
+
+      // Close all open swipeable items
+      swipeableRefs.current.forEach((ref) => {
+        ref?.close();
+      });
+
+      // Clear undo state
+      setShowUndo(false);
+      setUndoItem(null);
+      if (undoTimeout.current) {
+        clearTimeout(undoTimeout.current);
+        undoTimeout.current = null;
+      }
+
+      // Clear action sheet/modal states
+      setActionSheetProduct(null);
+      setShowModal(false);
+    }, [])
+  );
 
   if (loading) {
     return (
@@ -251,6 +286,7 @@ export default function FavoritesScreen() {
             </View>
           )}
           <FlatList
+            ref={flatListRef}
             data={favoriteProducts}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{
@@ -260,6 +296,13 @@ export default function FavoritesScreen() {
             }}
             renderItem={({ item: product }) => (
               <Swipeable
+                ref={(ref) => {
+                  if (ref) {
+                    swipeableRefs.current.set(product.id, ref);
+                  } else {
+                    swipeableRefs.current.delete(product.id);
+                  }
+                }}
                 renderRightActions={(progress, dragX) =>
                   renderRightActions(progress, dragX, product)
                 }

@@ -224,33 +224,15 @@ export default function LoginScreen() {
                 <View className="flex-1 h-px bg-gray-300" />
               </View>
 
-              {/* Social Login Buttons */}
+              {/* Continue as Guest Button */}
               <TouchableOpacity
-                className="bg-black rounded-full py-4 px-6 mb-3 flex-row items-center justify-center"
-                onPress={() => router.replace("/(tabs)")}
-                disabled={signingIn}
-                style={{
-                  elevation: 2,
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 4,
-                }}
-              >
-                <Ionicons name="logo-apple" size={20} color="#FFFFFF" />
-                <Text className="text-white text-center font-medium text-base ml-2">
-                  Apple nm
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className="bg-white border border-gray-300 rounded-full py-4 px-6 mb-6 flex-row items-center justify-center"
+                className="bg-gray-100 rounded-full py-4 px-6 mb-6 flex-row items-center justify-center"
                 onPress={() => router.replace("/(tabs)")}
                 disabled={signingIn}
               >
-                <Ionicons name="logo-google" size={20} color="#DB4437" />
+                <Ionicons name="person-outline" size={20} color="#374151" />
                 <Text className="text-gray-900 text-center font-medium text-base ml-2">
-                  Google nm
+                  Continue as Guest
                 </Text>
               </TouchableOpacity>
 

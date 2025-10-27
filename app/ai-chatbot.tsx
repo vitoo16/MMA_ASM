@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -39,21 +39,31 @@ export default function AIChatbotScreen() {
   const [loading, setLoading] = useState(false);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
+  const scrollViewRef = useRef<ScrollView>(null);
 
-  // Load sản phẩm từ API
+  // Load products from API
+  const loadProducts = async () => {
+    try {
+      const products = await apiService.getProducts();
+      setAllProducts(products);
+
+      const favIds = await favoritesService.getFavorites();
+      const favProducts = products.filter((p) => favIds.includes(p.id));
+      setFavoriteProducts(favProducts);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Reset scroll position when tab comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
+
   useEffect(() => {
-    (async () => {
-      try {
-        const products = await apiService.getProducts();
-        setAllProducts(products);
-
-        const favIds = await favoritesService.getFavorites();
-        const favProducts = products.filter((p) => favIds.includes(p.id));
-        setFavoriteProducts(favProducts);
-      } catch (error) {
-        console.error(error);
-      }
-    })();
+    loadProducts();
   }, []);
 
   const handleSend = useCallback(async () => {
@@ -166,7 +176,7 @@ export default function AIChatbotScreen() {
         </View>
 
         {/* Messages */}
-        <ScrollView className="flex-1 px-5 py-4">
+        <ScrollView ref={scrollViewRef} className="flex-1 px-5 py-4">
           {messages.map((msg, idx) => (
             <View
               key={idx}

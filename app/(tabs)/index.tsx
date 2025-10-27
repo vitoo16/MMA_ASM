@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useRef, useState } from "react";
 import {
   FlatList,
   Image,
@@ -23,12 +23,33 @@ export default function HomeScreen() {
   const { products } = useProducts();
   const { bestSellers } = useBestSellers();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const scrollViewRef = useRef<ScrollView>(null);
+  const navigatingToProduct = useRef(false);
+
+  // Reset scroll position and filters when returning from other tabs (not product detail)
+  useFocusEffect(
+    useCallback(() => {
+      // If navigating to product, don't reset anything
+      if (navigatingToProduct.current) {
+        navigatingToProduct.current = false;
+        return;
+      }
+
+      // Reset everything when returning from other tabs
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+      setSelectedBrand("All");
+      setSearchQuery("");
+      setActiveTab("all");
+    }, [])
+  );
 
   // Get unique brands from products
   const brands = ["All", ...Array.from(new Set(products.map((p) => p.brand)))];
 
   // Navigation function for product detail
   const navigateToProduct = (productId: string) => {
+    // Mark that we're navigating to product detail
+    navigatingToProduct.current = true;
     router.push(`/product/${productId}` as any);
   };
 
@@ -150,7 +171,11 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+      <ScrollView
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        className="flex-1"
+      >
         {/* Header */}
         <View className="px-5 pt-4 pb-2">
           <View className="flex-row justify-between items-center mb-6">

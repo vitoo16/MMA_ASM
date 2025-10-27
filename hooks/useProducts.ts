@@ -41,27 +41,32 @@ export const useBestSellers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchBestSellers = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await apiService.getBestSellers();
-        setBestSellers(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "An error occurred");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchBestSellers = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await apiService.getBestSellers();
+      setBestSellers(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchBestSellers();
   }, []);
+
+  const refetch = () => {
+    fetchBestSellers();
+  };
 
   return {
     bestSellers,
     loading,
     error,
+    refetch,
   };
 };
 

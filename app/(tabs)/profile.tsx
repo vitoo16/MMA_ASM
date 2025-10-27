@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import React, { useEffect } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Alert,
   SafeAreaView,
@@ -14,6 +14,14 @@ import { useAuth } from "../../contexts/AuthContext";
 
 export default function ProfileScreen() {
   const { user, signOut, loading } = useAuth();
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  // Reset scroll position when tab comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      scrollViewRef.current?.scrollTo({ y: 0, animated: false });
+    }, [])
+  );
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -68,7 +76,11 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         {/* User Profile Card */}
         <View className="mx-5 mb-6">
           <View 
