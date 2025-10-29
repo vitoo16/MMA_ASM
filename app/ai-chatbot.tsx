@@ -75,19 +75,24 @@ export default function AIChatbotScreen() {
 
     try {
       const context = `
-      Bạn là trợ lý AI của một ứng dụng bán các sản phẩm nghệ thuật như bút màu, sơn, màu nước.
-      Trả lời ngắn gọn, thân thiện và hữu ích.
-      Giữ hội thoại có mạch logic, nhớ nội dung trước đó.
-      Nếu người dùng hỏi về sản phẩm, chỉ nói trong phạm vi app này.
-      Nếu người dùng có sản phẩm yêu thích (${
+Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người bạn am hiểu nghệ thuật 🎨. 
+Ứng dụng của bạn chuyên bán các sản phẩm nghệ thuật như: bút màu, sơn, màu nước, cọ vẽ, giấy vẽ,...
+
+⚙️ NGUYÊN TẮC:
+- Luôn giữ giọng văn nhẹ nhàng, thân thiện, có chút cảm xúc và tự nhiên như người thật.
+- Nếu người dùng hỏi câu vô nghĩa hoặc không liên quan (ví dụ: “trời mưa có buồn không?”), hãy phản hồi dí dỏm, 
+  sau đó khéo léo chuyển hướng sang chủ đề nghệ thuật hoặc sản phẩm.
+- Nếu người dùng hỏi về sản phẩm, chỉ nói trong phạm vi sản phẩm có trong app này.
+- Nếu người dùng nói về việc cần chọn, so sánh, hay tìm cảm hứng vẽ, hãy gợi ý sản phẩm cụ thể trong app bằng cú pháp [[Tên sản phẩm]].
+- Nếu người dùng nói linh tinh, bạn vẫn phải giữ hội thoại tự nhiên và tìm cách gắn kết lại chủ đề vẽ hoặc sáng tạo.
+- Nếu người dùng có sản phẩm yêu thích (${
         favoriteProducts.length
       } sản phẩm): ${favoriteProducts
         .map((p) => `${p.artName} (${p.brand}, giá $${p.price})`)
         .join("; ")}.
-      Nếu cần so sánh, hãy dựa trên mô tả, giá và thương hiệu.
-      Nếu gợi ý sản phẩm, hãy đặt tên sản phẩm trong [[double brackets]] để app có thể render link.
-      Ngôn ngữ trả lời: theo ngôn ngữ người dùng nhập.
-      `;
+- Ngôn ngữ trả lời: theo ngôn ngữ người dùng nhập.
+- Giữ hội thoại có mạch logic, nhớ nội dung trước đó để phản hồi hợp lý.
+`;
 
       const chat = await genAI.getGenerativeModel({
         model: "gemini-2.0-flash-exp",
@@ -156,15 +161,23 @@ export default function AIChatbotScreen() {
         <View className="px-5 pt-4 pb-3">
           <View className="flex-row justify-between items-center">
             <View>
-              <Text className="text-2xl font-bold text-gray-900 mb-1">AI Assistant</Text>
+              <Text className="text-2xl font-bold text-gray-900 mb-1">
+                AI Assistant
+              </Text>
               <View className="flex-row items-center">
                 <View className="w-2 h-2 bg-green-500 rounded-full mr-2" />
                 <Text className="text-xs text-gray-500">Powered by Gemini</Text>
               </View>
             </View>
             <View className="flex-row gap-3">
-              <GradientBackground 
-                style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}
+              <GradientBackground
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
                 imageStyle={{ borderRadius: 20 }}
               >
                 <TouchableOpacity className="w-full h-full justify-center items-center">
@@ -186,9 +199,7 @@ export default function AIChatbotScreen() {
             >
               <View
                 className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                  msg.role === "user"
-                    ? ""
-                    : "bg-gray-100"
+                  msg.role === "user" ? "" : "bg-gray-100"
                 }`}
                 style={msg.role === "user" ? {} : {}}
               >
@@ -204,9 +215,7 @@ export default function AIChatbotScreen() {
                     {Array.isArray(msg.text) ? (
                       msg.text
                     ) : (
-                      <Text className="text-base text-white">
-                        {msg.text}
-                      </Text>
+                      <Text className="text-base text-white">{msg.text}</Text>
                     )}
                   </GradientBackground>
                 ) : (
@@ -256,7 +265,13 @@ export default function AIChatbotScreen() {
           </View>
           {input.trim() && !loading ? (
             <GradientBackground
-              style={{ width: 48, height: 48, borderRadius: 24, justifyContent: 'center', alignItems: 'center' }}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 24,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
               imageStyle={{ borderRadius: 24 }}
             >
               <TouchableOpacity
@@ -264,11 +279,7 @@ export default function AIChatbotScreen() {
                 disabled={!input.trim() || loading}
                 className="w-full h-full justify-center items-center"
               >
-                <Ionicons
-                  name="send"
-                  size={20}
-                  color="#FFFFFF"
-                />
+                <Ionicons name="send" size={20} color="#FFFFFF" />
               </TouchableOpacity>
             </GradientBackground>
           ) : (
@@ -277,11 +288,7 @@ export default function AIChatbotScreen() {
               disabled={!input.trim() || loading}
               className="w-12 h-12 rounded-full bg-gray-200 justify-center items-center"
             >
-              <Ionicons
-                name="send"
-                size={20}
-                color="#9CA3AF"
-              />
+              <Ionicons name="send" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           )}
         </View>
