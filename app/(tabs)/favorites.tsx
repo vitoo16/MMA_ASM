@@ -1,16 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
-  ActionSheetIOS,
   ActivityIndicator,
   Animated,
   FlatList,
   Image,
-  Modal,
-  Platform,
-  Pressable,
   SafeAreaView,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -24,21 +21,15 @@ import React, { useCallback, useRef, useState } from "react";
 
 export default function FavoritesScreen() {
   const router = useRouter();
-  const {
-    favoriteProducts,
-    loading,
-    clearFavorites,
-    toggleFavorite,
-  } = useFavorites();
+  const { favoriteProducts, loading, clearFavorites, toggleFavorite } =
+    useFavorites();
   const [undoItem, setUndoItem] = useState<Product | null>(null);
   const [showUndo, setShowUndo] = useState(false);
   const undoTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [actionSheetProduct, setActionSheetProduct] = useState<Product | null>(
-    null
-  );
-  const [showModal, setShowModal] = useState(false);
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const flatListRef = useRef<FlatList>(null);
   const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
 
@@ -52,6 +43,10 @@ export default function FavoritesScreen() {
       setSelectMode(false);
       setSelectedIds([]);
 
+      // Reset search mode and query
+      setSearchMode(false);
+      setSearchQuery("");
+
       // Close all open swipeable items
       swipeableRefs.current.forEach((ref) => {
         ref?.close();
@@ -64,12 +59,32 @@ export default function FavoritesScreen() {
         clearTimeout(undoTimeout.current);
         undoTimeout.current = null;
       }
-
-      // Clear action sheet/modal states
-      setActionSheetProduct(null);
-      setShowModal(false);
     }, [])
   );
+
+  // Filter products based on search query
+  const filteredProducts = favoriteProducts.filter((product) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      (product.name && product.name.toLowerCase().includes(query)) ||
+      (product.brand && product.brand.toLowerCase().includes(query)) ||
+      (product.category && product.category.toLowerCase().includes(query))
+    );
+  });
+
+  // Search handlers
+  const handleSearchToggle = () => {
+    setSearchMode(!searchMode);
+    if (searchMode) {
+      setSearchQuery("");
+    }
+  };
+
+  const handleSearchCancel = () => {
+    setSearchMode(false);
+    setSearchQuery("");
+  };
 
   if (loading) {
     return (
@@ -85,40 +100,98 @@ export default function FavoritesScreen() {
       <View className="flex-row justify-between items-center">
         <View>
           <Text className="text-2xl font-bold text-gray-900 mb-1">
-            My Favorites
+            {selectMode ? "Select Items" : "My Favorites"}
           </Text>
           {favoriteProducts.length > 0 && (
             <Text className="text-sm text-gray-500">
-              {favoriteProducts.length}{" "}
-              {favoriteProducts.length === 1 ? "item" : "items"} saved
+              {selectMode
+                ? `${selectedIds.length} selected`
+                : searchMode && searchQuery.trim()
+                ? `${filteredProducts.length} of ${favoriteProducts.length} ${
+                    filteredProducts.length === 1 ? "item" : "items"
+                  } found`
+                : `${favoriteProducts.length} ${
+                    favoriteProducts.length === 1 ? "item" : "items"
+                  } saved`}
             </Text>
           )}
         </View>
         <View className="flex-row gap-3">
-          <GradientBackground
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 20,
-              justifyContent: "center",
-              alignItems: "center",
-            }}
-            imageStyle={{ borderRadius: 20 }}
-          >
-            <TouchableOpacity className="w-full h-full justify-center items-center">
-              <Ionicons name="search" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </GradientBackground>
-          {favoriteProducts.length > 0 && (
-            <TouchableOpacity
-              onPress={() => clearFavorites()}
-              className="w-10 h-10 bg-red-50 rounded-full justify-center items-center"
-            >
-              <Ionicons name="trash-outline" size={20} color="#EF4444" />
-            </TouchableOpacity>
+          {selectMode ? (
+            <>
+              <TouchableOpacity
+                onPress={handleBatchUnfavorite}
+                disabled={selectedIds.length === 0}
+                className={`px-4 py-2 rounded-full ${
+                  selectedIds.length > 0 ? "bg-red-500" : "bg-gray-300"
+                }`}
+              >
+                <Text
+                  className={`font-semibold ${
+                    selectedIds.length > 0 ? "text-white" : "text-gray-500"
+                  }`}
+                >
+                  Remove ({selectedIds.length})
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleCancelSelect}
+                className="px-4 py-2 bg-gray-100 rounded-full"
+              >
+                <Text className="text-gray-700 font-semibold">Cancel</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <GradientBackground
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+                imageStyle={{ borderRadius: 20 }}
+              >
+                <TouchableOpacity
+                  onPress={handleSearchToggle}
+                  className="w-full h-full justify-center items-center"
+                >
+                  <Ionicons name="search" size={20} color="#FFFFFF" />
+                </TouchableOpacity>
+              </GradientBackground>
+              {favoriteProducts.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => clearFavorites()}
+                  className="w-10 h-10 bg-red-50 rounded-full justify-center items-center"
+                >
+                  <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                </TouchableOpacity>
+              )}
+            </>
           )}
         </View>
       </View>
+      {searchMode && (
+        <View className="mt-3 flex-row items-center bg-gray-50 rounded-lg px-3 py-2">
+          <Ionicons name="search" size={20} color="#6B7280" />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search favorites..."
+            className="flex-1 ml-2 text-gray-900"
+            autoFocus={true}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={20} color="#6B7280" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={handleSearchCancel} className="ml-2">
+            <Text className="text-blue-500 font-medium">Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
@@ -142,34 +215,17 @@ export default function FavoritesScreen() {
     }
   };
 
-  // Long press ActionSheet/Modal
+  // Long press to enter select mode
   const handleLongPress = (product: Product) => {
-    setActionSheetProduct(product);
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: [
-            "View details",
-            "Remove from favorites",
-            selectMode ? "Deselect" : "Select product",
-            "Cancel",
-          ],
-          destructiveButtonIndex: 1,
-          cancelButtonIndex: 3,
-        },
-        (buttonIndex) => {
-          if (buttonIndex === 0) router.push(`/product/${product.id}`);
-          else if (buttonIndex === 1) handleUnfavorite(product);
-          else if (buttonIndex === 2) handleSelect(product.id);
-        }
-      );
+    if (!selectMode) {
+      setSelectMode(true);
+      setSelectedIds([product.id]);
     } else {
-      setShowModal(true);
+      handleSelect(product.id);
     }
   };
 
   const handleSelect = (id: string) => {
-    setSelectMode(true);
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
@@ -179,6 +235,11 @@ export default function FavoritesScreen() {
     for (const id of selectedIds) {
       await toggleFavorite(id);
     }
+    setSelectedIds([]);
+    setSelectMode(false);
+  };
+
+  const handleCancelSelect = () => {
     setSelectedIds([]);
     setSelectMode(false);
   };
@@ -241,53 +302,31 @@ export default function FavoritesScreen() {
             </GradientBackground>
           </View>
         </View>
+      ) : filteredProducts.length === 0 && searchQuery.trim() ? (
+        <View className="flex-1 justify-center items-center px-8">
+          {/* No Search Results Illustration */}
+          <View className="w-28 h-28 bg-gray-100 rounded-full justify-center items-center mb-6">
+            <Ionicons name="search" size={56} color="#9CA3AF" />
+          </View>
+          <Text className="text-2xl font-bold text-gray-900 mb-3 text-center">
+            No results found
+          </Text>
+          <Text className="text-base text-gray-500 text-center mb-6 leading-6 px-4">
+            We couldn't find any favorites matching "{searchQuery}". Try a
+            different search term.
+          </Text>
+          <TouchableOpacity
+            onPress={() => setSearchQuery("")}
+            className="px-6 py-3 bg-blue-50 rounded-lg"
+          >
+            <Text className="text-blue-600 font-semibold">Clear Search</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <>
-          {selectMode && selectedIds.length > 0 && (
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                backgroundColor: "#FEF3C7",
-                padding: 10,
-                margin: 10,
-                borderRadius: 10,
-              }}
-            >
-              <Text style={{ flex: 1, color: "#B45309", fontWeight: "bold" }}>
-                {selectedIds.length} selected
-              </Text>
-              <TouchableOpacity
-                onPress={handleBatchUnfavorite}
-                style={{
-                  backgroundColor: "#EF4444",
-                  padding: 8,
-                  borderRadius: 8,
-                  marginRight: 8,
-                }}
-              >
-                <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                  Remove
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => {
-                  setSelectMode(false);
-                  setSelectedIds([]);
-                }}
-                style={{
-                  backgroundColor: "#F3F4F6",
-                  padding: 8,
-                  borderRadius: 8,
-                }}
-              >
-                <Text style={{ color: "#374151" }}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          )}
           <FlatList
             ref={flatListRef}
-            data={favoriteProducts}
+            data={filteredProducts}
             keyExtractor={(item) => item.id}
             contentContainerStyle={{
               paddingHorizontal: 20,
@@ -310,10 +349,20 @@ export default function FavoritesScreen() {
               >
                 <TouchableOpacity
                   key={product.id}
-                  onPress={() => router.push(`/product/${product.id}` as any)}
+                  onPress={() => {
+                    if (selectMode) {
+                      handleSelect(product.id);
+                    } else {
+                      router.push(`/product/${product.id}` as any);
+                    }
+                  }}
                   onLongPress={() => handleLongPress(product)}
                   activeOpacity={0.85}
-                  className="bg-white rounded-2xl mb-4 overflow-hidden border border-gray-100"
+                  className={`bg-white rounded-2xl mb-4 overflow-hidden border ${
+                    selectMode && selectedIds.includes(product.id)
+                      ? "border-blue-500 border-2"
+                      : "border-gray-100"
+                  }`}
                   style={{
                     shadowColor: "#000",
                     shadowOffset: { width: 0, height: 2 },
@@ -323,6 +372,25 @@ export default function FavoritesScreen() {
                   }}
                 >
                   <View className="flex-row p-4">
+                    {selectMode && (
+                      <View className="mr-3 justify-center">
+                        <View
+                          className={`w-6 h-6 rounded-full border-2 justify-center items-center ${
+                            selectedIds.includes(product.id)
+                              ? "bg-blue-500 border-blue-500"
+                              : "border-gray-300"
+                          }`}
+                        >
+                          {selectedIds.includes(product.id) && (
+                            <Ionicons
+                              name="checkmark"
+                              size={16}
+                              color="white"
+                            />
+                          )}
+                        </View>
+                      </View>
+                    )}
                     <Image
                       source={{ uri: product.image }}
                       className="w-24 h-24 rounded-xl mr-4"
@@ -341,9 +409,26 @@ export default function FavoritesScreen() {
                         </Text>
                       </View>
                       <View className="flex-row items-center justify-between">
-                        <Text className="text-lg font-bold text-gray-900">
-                          ${product.price.toFixed(2)}
-                        </Text>
+                        <View className="flex-row items-center gap-2">
+                          {product.limitedTimeDeal > 0 ? (
+                            <>
+                              <Text className="text-lg font-bold text-gray-900">
+                                $
+                                {(
+                                  product.price *
+                                  (1 - product.limitedTimeDeal)
+                                ).toFixed(2)}
+                              </Text>
+                              <Text className="text-sm text-gray-500 line-through">
+                                ${product.price.toFixed(2)}
+                              </Text>
+                            </>
+                          ) : (
+                            <Text className="text-lg font-bold text-gray-900">
+                              ${product.price.toFixed(2)}
+                            </Text>
+                          )}
+                        </View>
                         {product.limitedTimeDeal > 0 && (
                           <View className="bg-red-500 px-2 py-1 rounded-md">
                             <Text className="text-xs text-white font-bold">
@@ -353,100 +438,22 @@ export default function FavoritesScreen() {
                         )}
                       </View>
                     </View>
-                    <TouchableOpacity
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        handleUnfavorite(product);
-                      }}
-                      className="ml-2 w-10 h-10 justify-center items-center"
-                    >
-                      <Ionicons name="heart" size={24} color="#EF4444" />
-                    </TouchableOpacity>
+                    {!selectMode && (
+                      <TouchableOpacity
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleUnfavorite(product);
+                        }}
+                        className="ml-2 w-10 h-10 justify-center items-center"
+                      >
+                        <Ionicons name="heart" size={24} color="#EF4444" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </TouchableOpacity>
               </Swipeable>
             )}
           />
-          {/* Android ActionSheet Modal */}
-          {showModal && actionSheetProduct && (
-            <Modal
-              visible={showModal}
-              transparent
-              animationType="fade"
-              onRequestClose={() => setShowModal(false)}
-            >
-              <Pressable
-                style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.2)" }}
-                onPress={() => setShowModal(false)}
-              />
-              <View
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: "#fff",
-                  borderTopLeftRadius: 18,
-                  borderTopRightRadius: 18,
-                  padding: 18,
-                }}
-              >
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowModal(false);
-                    if (actionSheetProduct)
-                      router.push(`/product/${actionSheetProduct.id}`);
-                  }}
-                  style={{ paddingVertical: 14 }}
-                >
-                  <Text style={{ fontSize: 16, color: "#111" }}>
-                    View details
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowModal(false);
-                    if (actionSheetProduct)
-                      handleUnfavorite(actionSheetProduct);
-                  }}
-                  style={{ paddingVertical: 14 }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      color: "#EF4444",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    Remove from favorites
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    setShowModal(false);
-                    if (actionSheetProduct) handleSelect(actionSheetProduct.id);
-                  }}
-                  style={{ paddingVertical: 14 }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      color: "#EAB308",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {selectMode ? "Deselect" : "Select product"}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowModal(false)}
-                  style={{ paddingVertical: 14 }}
-                >
-                  <Text style={{ fontSize: 16, color: "#6B7280" }}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-            </Modal>
-          )}
           {/* Snackbar Undo */}
           {showUndo && undoItem && (
             <Animated.View
