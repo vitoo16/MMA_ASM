@@ -214,16 +214,26 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
 Ứng dụng của bạn chuyên bán các sản phẩm nghệ thuật như: bút màu, sơn, màu nước, cọ vẽ, giấy vẽ,...
 
 ⚙️ NGUYÊN TẮC:
+- Đọc và ghi nhớ kỹ thông tin về sản phẩm nghệ thuật có trong app này (${
+        allProducts.length
+      } sản phẩm): ${allProducts
+        .map(
+          (p) => `${p.artName} ( giá ${p.price - p.price * p.limitedTimeDeal})`
+        )
+        .join("; ")}) 
+ 
 - Luôn giữ giọng văn nhẹ nhàng, thân thiện, có chút cảm xúc và tự nhiên như người thật.
 - Nếu người dùng hỏi câu vô nghĩa hoặc không liên quan (ví dụ: “trời mưa có buồn không?”), hãy phản hồi dí dỏm, 
   sau đó khéo léo chuyển hướng sang chủ đề nghệ thuật hoặc sản phẩm.
 - Nếu người dùng hỏi về sản phẩm, chỉ nói trong phạm vi sản phẩm có trong app này.
 - Nếu người dùng nói về việc cần chọn, so sánh, hay tìm cảm hứng vẽ, hãy gợi ý sản phẩm cụ thể trong app bằng cú pháp [[Tên sản phẩm]].
 - Nếu người dùng nói linh tinh, bạn vẫn phải giữ hội thoại tự nhiên và tìm cách gắn kết lại chủ đề vẽ hoặc sáng tạo.
-- Nếu người dùng có sản phẩm yêu thích (${
+- Nếu người dùng có sản phẩm yêu thích, hãy gợi ý sản phẩm yêu thích của họ như một lựa chọn phụ ở đầu câu chuyện, chỉ gợi ý và đưa ra một lần thôi (${
         favoriteProducts.length
       } sản phẩm): ${favoriteProducts
-        .map((p) => `${p.artName} (${p.brand}, giá $${p.price})`)
+        .map(
+          (p) => `${p.artName} ( giá $${p.price - p.price * p.limitedTimeDeal})`
+        )
         .join("; ")}.
 - Ngôn ngữ trả lời: theo ngôn ngữ người dùng nhập.
 - Giữ hội thoại có mạch logic, nhớ nội dung trước đó để phản hồi hợp lý nhưng khi trả lời, chỉ viết câu trả lời mới, không lặp lại hội thoại trước đó.
@@ -244,7 +254,7 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
         .join("\n");
 
       const result = await chat.generateContent(
-        `${context}\n${conversationHistory}\nNgười dùng: ${input}`
+        `${context}\nNgười dùng: ${input}`
       );
       const aiText = result.response.text();
 
@@ -255,7 +265,7 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
         const match = part.match(/\[\[(.*?)\]\]/);
         if (match) {
           const name = match[1];
-          // Chỉ gợi ý nếu là sản phẩm có trong data
+          // Kiểm tra có phải sản phẩm không
           const product = allProducts.find((p) =>
             p.artName.toLowerCase().includes(name.toLowerCase())
           );
@@ -279,8 +289,24 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
               </TouchableOpacity>
             );
           }
-          // Nếu không phải sản phẩm, KHÔNG render gì cả
-          return null;
+          // Nếu là loại/type, bấm vào sẽ copy ra khung chat
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => setInput(`[[${name}]]`)}
+              style={{
+                backgroundColor: "#e0e7ff",
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+                borderRadius: 54,
+                marginVertical: 2,
+              }}
+            >
+              <Text style={{ color: "#3730a3", fontWeight: "bold" }}>
+                {`[[${name}]]`}
+              </Text>
+            </TouchableOpacity>
+          );
         }
         return (
           <Text key={i} style={{ color: "#111" }}>
