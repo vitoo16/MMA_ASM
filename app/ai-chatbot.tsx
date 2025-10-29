@@ -1,8 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -36,6 +38,129 @@ export default function AIChatbotScreen() {
     },
   ]);
   const [input, setInput] = useState("");
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  // Hàm chọn ảnh từ thư viện
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+      base64: true,
+    });
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      // Hiển thị ảnh vừa gửi lên chat
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          text: (
+            <Image
+              source={{ uri: result.assets[0].uri }}
+              style={{ width: 200, height: 200, borderRadius: 12 }}
+            />
+          ),
+        },
+      ]);
+
+      // Trả về thông báo AI chưa hỗ trợ phân tích hình ảnh và gợi ý sản phẩm
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: (
+            <View style={{ marginTop: 8 }}>
+              <Text
+                style={{
+                  color: "#6366F1",
+                  fontWeight: "bold",
+                  fontSize: 16,
+                  marginBottom: 6,
+                }}
+              >
+                AI chưa hỗ trợ phân tích hình ảnh, nhưng bạn vẫn có thể hỏi về
+                sản phẩm hoặc nhận gợi ý!
+              </Text>
+              {allProducts.length > 0 && (
+                <Text
+                  style={{ marginBottom: 8, color: "#374151", fontSize: 15 }}
+                >
+                  Một số sản phẩm nổi bật:
+                </Text>
+              )}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 2 }}
+                contentContainerStyle={{ gap: 12, paddingRight: 12 }}
+              >
+                {allProducts.slice(0, 10).map((p, idx) => (
+                  <TouchableOpacity
+                    key={p.id}
+                    onPress={() => router.push(`/product/${p.id}` as any)}
+                    style={{
+                      backgroundColor: "#F3F4F6",
+                      borderRadius: 18,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                      alignItems: "center",
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.12,
+                      shadowRadius: 4,
+                      elevation: 2,
+                      minWidth: 90,
+                      marginRight: 0,
+                    }}
+                  >
+                    {/* Nếu có hình ảnh sản phẩm thì hiển thị, nếu không thì icon */}
+                    {p.image ? (
+                      <Image
+                        source={{ uri: p.image }}
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 12,
+                          marginBottom: 6,
+                        }}
+                      />
+                    ) : (
+                      <Ionicons
+                        name="color-palette"
+                        size={28}
+                        color="#6366F1"
+                        style={{ marginBottom: 6 }}
+                      />
+                    )}
+                    <Text
+                      style={{
+                        color: "#1F2937",
+                        fontWeight: "bold",
+                        fontSize: 14,
+                        textAlign: "center",
+                      }}
+                    >
+                      {p.artName}
+                    </Text>
+                    <Text
+                      style={{
+                        color: "#6B7280",
+                        fontSize: 12,
+                        marginTop: 2,
+                        textAlign: "center",
+                      }}
+                    >
+                      {p.brand}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          ),
+        },
+      ]);
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
@@ -74,7 +199,17 @@ export default function AIChatbotScreen() {
     setLoading(true);
 
     try {
+      // 3️⃣ Personality cho AI
+      const personality = [
+        "Bạn thích vẽ và thường khen người dùng sáng tạo.",
+        "Bạn đôi khi thêm emoji để thể hiện cảm xúc 😊🎨.",
+        "Khi người dùng có vẻ buồn, bạn khích lệ nhẹ nhàng.",
+        "Khi người dùng hỏi linh tinh, bạn cười nhẹ rồi kéo về chủ đề nghệ thuật.",
+      ].join("\n");
+
+      // 2️⃣ Context + Personality
       const context = `
+${personality}
 Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người bạn am hiểu nghệ thuật 🎨. 
 Ứng dụng của bạn chuyên bán các sản phẩm nghệ thuật như: bút màu, sơn, màu nước, cọ vẽ, giấy vẽ,...
 
@@ -91,25 +226,41 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
         .map((p) => `${p.artName} (${p.brand}, giá $${p.price})`)
         .join("; ")}.
 - Ngôn ngữ trả lời: theo ngôn ngữ người dùng nhập.
-- Giữ hội thoại có mạch logic, nhớ nội dung trước đó để phản hồi hợp lý.
+- Giữ hội thoại có mạch logic, nhớ nội dung trước đó để phản hồi hợp lý nhưng khi trả lời, chỉ viết câu trả lời mới, không lặp lại hội thoại trước đó.
 `;
 
       const chat = await genAI.getGenerativeModel({
         model: "gemini-2.0-flash-exp",
       });
+
+      // 2️⃣ Gửi lịch sử hội thoại
+      const conversationHistory = messages
+        .map(
+          (m) =>
+            `${m.role === "user" ? "Người dùng" : "Trợ lý"}: ${
+              typeof m.text === "string" ? m.text : ""
+            }`
+        )
+        .join("\n");
+
       const result = await chat.generateContent(
-        `${context}\nNgười dùng: ${input}`
+        `${context}\n${conversationHistory}\nNgười dùng: ${input}`
       );
       const aiText = result.response.text();
 
-      // Replace [[Product]] thành button bấm được
+      // 4️⃣ Gợi ý sản phẩm mượt mà hơn (không phân biệt hoa thường)
       const parts = aiText.split(/(\[\[.*?\]\])/g);
+      // ...existing code...
       const formatted = parts.map((part, i) => {
         const match = part.match(/\[\[(.*?)\]\]/);
         if (match) {
           const name = match[1];
-          const product = allProducts.find((p) => p.artName.includes(name));
+          // Chỉ gợi ý nếu là sản phẩm có trong data
+          const product = allProducts.find((p) =>
+            p.artName.toLowerCase().includes(name.toLowerCase())
+          );
           if (product) {
+            // Nếu là sản phẩm, bấm vào xem chi tiết
             return (
               <TouchableOpacity
                 key={i}
@@ -128,6 +279,8 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
               </TouchableOpacity>
             );
           }
+          // Nếu không phải sản phẩm, KHÔNG render gì cả
+          return null;
         }
         return (
           <Text key={i} style={{ color: "#111" }}>
@@ -135,8 +288,13 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
           </Text>
         );
       });
+      // ...existing code...
 
-      setMessages((prev) => [...prev, { role: "assistant", text: formatted }]);
+      // 5️⃣ Giới hạn độ dài hội thoại
+      setMessages((prev) => {
+        const newMsgs = [...prev, { role: "assistant", text: formatted }];
+        return newMsgs.slice(-10);
+      });
     } catch (error) {
       console.error(error);
       setMessages((prev) => [
@@ -149,7 +307,7 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
     } finally {
       setLoading(false);
     }
-  }, [input, allProducts, favoriteProducts]);
+  }, [input, allProducts, favoriteProducts, messages]);
 
   return (
     <SafeAreaView className="flex-1 bg-white">
@@ -247,7 +405,7 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
           )}
         </ScrollView>
 
-        {/* Input */}
+        {/* Input + nút gửi ảnh */}
         <View
           className="flex-row items-center px-5 py-4"
           style={{ marginBottom: 100 }}
@@ -262,6 +420,13 @@ Bạn là trợ lý AI vui tính, nói chuyện tự nhiên như một người 
               multiline
               maxLength={500}
             />
+            <TouchableOpacity
+              onPress={pickImage}
+              className="ml-2"
+              style={{ padding: 4 }}
+            >
+              <Ionicons name="image" size={24} color="#6366F1" />
+            </TouchableOpacity>
           </View>
           {input.trim() && !loading ? (
             <GradientBackground
